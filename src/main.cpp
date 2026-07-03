@@ -225,7 +225,7 @@ int main(void)
 
     DEBUG("START\n");
     
-    const unsigned long IDLE_TIMEOUT = 60000; // 1 minute in milliseconds
+    const unsigned long IDLE_TIMEOUT = 30000; // 0.5 minute in milliseconds
 
     unsigned long lastActivityTime = time_ms64(); 
 
@@ -276,7 +276,7 @@ int main(void)
              {
                 if(a->filament[i].name[0]=='T' && a->filament[i].name[1]=='P' && a->filament[i].name[2]=='U')
                     pwm_ratio[i]=0.5f;
-                if(a->filament[i].motion != _filament_motion::idle)
+                if(a->filament[i].motion != _filament_motion::idle && a->filament[i].motion != _filament_motion::stop_on_use)
                 {
                     if(!is_filament_sendout){
                         DEBUG("****in use****");
@@ -312,10 +312,10 @@ int main(void)
              // 用当前时间减去最后一次活动时间，判断是否达到了阈值
             if (time_ms64() - lastActivityTime >= IDLE_TIMEOUT) {
                 SYS_RGB.set_RGB(255, 0x00, 255, 0);
-                DEBUG("System has been idle for 1 minute. Rebooting...");
+                DEBUG("System has been idle for 0.5 minute. Rebooting...");
                 
                 // 延时一下以确保上面的 Serial.println 能够完整发送到电脑
-                delay(1000 * 10); 
+                delay(1000 * 15); 
                 
                 // 3. 触发核心软件复位 (CH32V / RISC-V 均适用)
                 NVIC_SystemReset(); 

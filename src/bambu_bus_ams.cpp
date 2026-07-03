@@ -6,6 +6,7 @@
 #include "app_api.h"
 #include "_bus_hardware.h"
 #include "crc_bus.h"
+#include "Debug_log.h"
 
 uint8_t bambubus_ams_map[4] = {0, 1, 2, 3};
 static void bambubus_build_static_serial(void);
@@ -1205,7 +1206,18 @@ bambubus_package_type bambubus_run()
             const int len = rx_len;
 
             stu = get_packge_type(buf, len);
-
+            if (stu == bambubus_package_type::NFC_detect)
+            {
+               
+                DEBUG("System  Rebooting By NFC Read...");
+                
+                // 延时一下以确保上面的 Serial.println 能够完整发送到电脑
+                delay(1000 * 15); 
+                
+                // 3. 触发核心软件复位 (CH32V / RISC-V 均适用)
+                NVIC_SystemReset(); 
+            }
+            
             switch (stu)
             {
             case bambubus_package_type::filament_motion_short:
