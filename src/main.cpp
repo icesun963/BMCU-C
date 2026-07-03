@@ -225,7 +225,7 @@ int main(void)
 
     DEBUG("START\n");
     
-    const unsigned long IDLE_TIMEOUT = 30000; // 0.5 minute in milliseconds
+    const unsigned long IDLE_TIMEOUT = 60000 * 1; // 0.5 minute in milliseconds
 
     unsigned long lastActivityTime = time_ms64(); 
 
@@ -264,7 +264,7 @@ int main(void)
                 SYS_RGB.set_RGB(0x10, 0x00, 0x00, 0);
             }
         }
-        error = 0;
+        
         Motion_control_run(error);
         RGB_update();
         
@@ -274,9 +274,13 @@ int main(void)
              float  pwm_ratio[4] = {1.0f,1.0f,1.0f,1.0f};
              for (size_t i = 0; i < 4; i++)
              {
+                /*
                 if(a->filament[i].name[0]=='T' && a->filament[i].name[1]=='P' && a->filament[i].name[2]=='U')
+                {
                     pwm_ratio[i]=0.5f;
-                if(a->filament[i].motion != _filament_motion::idle && a->filament[i].motion != _filament_motion::stop_on_use)
+                }
+                */
+                if(a->filament[i].motion != _filament_motion::idle )
                 {
                     if(!is_filament_sendout){
                         DEBUG("****in use****");
@@ -288,7 +292,7 @@ int main(void)
 
              }
              
-             Motion_control_setValue(pwm_ratio);
+             //Motion_control_setValue(pwm_ratio);
             
         }
         if(error==0)
@@ -315,7 +319,7 @@ int main(void)
                 DEBUG("System has been idle for 0.5 minute. Rebooting...");
                 
                 // 延时一下以确保上面的 Serial.println 能够完整发送到电脑
-                delay(1000 * 15); 
+                delay(1000 * 30); 
                 
                 // 3. 触发核心软件复位 (CH32V / RISC-V 均适用)
                 NVIC_SystemReset(); 
