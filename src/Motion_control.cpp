@@ -281,20 +281,20 @@ static constexpr int MC_PULL_DEADBAND_PCT_HIGH = 70;
 #elif BMCU_P1S  // P1S
     // Stage1
     
-    static constexpr int   MC_LOAD_S1_FAST_PCT       = 88;
-    static int   MC_LOAD_S1_HARD_STOP_PCT  = 97;  // bezpiecznik
+    static constexpr int   MC_LOAD_S1_FAST_PCT       = 85;
+    static int   MC_LOAD_S1_HARD_STOP_PCT  = 95;  // bezpiecznik
     static constexpr int   MC_LOAD_S1_HARD_HYS       = 2;   // wróć dopiero < (HARD_STOP - HYS)
     // Stage2 (hold_load)
-    static constexpr float MC_LOAD_S2_HOLD_TARGET_PCT    = 95.0f;
+    static constexpr float MC_LOAD_S2_HOLD_TARGET_PCT    = 90.0f;
     static constexpr float MC_LOAD_S2_HOLD_BAND_LO_DELTA = 1.0f;   // push_hi = hold_target - delta
-    static constexpr float MC_LOAD_S2_PUSH_START_PCT     = 88.0f;  // start push PWM
-    static constexpr float MC_LOAD_S2_PWM_HI             = 550.0f;
+    static constexpr float MC_LOAD_S2_PUSH_START_PCT     = 75.0f;  // start push PWM
+    static constexpr float MC_LOAD_S2_PWM_HI             = 480.0f;
     static constexpr float MC_LOAD_S2_PWM_LO             = 1000.0f;
     
     // ===== ON_USE CONTROL =====
-    static constexpr float MC_ON_USE_TARGET_PCT    = 54.0f;
+    static constexpr float MC_ON_USE_TARGET_PCT    = 52.0f;
     static constexpr float MC_ON_USE_BAND_LO_DELTA = 0.2f;  // band_lo = target - delta
-    static constexpr float MC_ON_USE_BAND_HI_PCT   = 65.0f;
+    static constexpr float MC_ON_USE_BAND_HI_PCT   = 60.0f;
 #else        // A1
     // Stage1
     static constexpr int   MC_LOAD_S1_FAST_PCT       = 85;
@@ -322,7 +322,7 @@ static constexpr float    CAL_RESET_NEAR_MIN    = 0.03f;
 static int      g_hold_ch = -1;
 static uint32_t g_hold_t0_ticks = 0;
 static int      g_hold_count = 0;
-static int      g_hold_count_max = 500;
+static int      g_hold_count_max = 200;
 static float    g_pwm_ratio[4] = {1.0f, 1.0f, 1.0f, 1.0f};
 // kiedy kanał OSTATNIO wyszedł z on_use (0 = nigdy, 1 = marker "był kiedykolwiek") (patch do wersji BMCU DM przy automatycznej zmianie filamentu gdy się skończy, żeby ekstruder nie trzymał filamentu)
 static uint64_t g_last_on_use_exit_ms[4] = {0,0,0,0};
