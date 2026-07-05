@@ -226,7 +226,8 @@ int main(void)
     DEBUG("START\n");
     
     const unsigned long IDLE_TIMEOUT = 60000 * 1; // 1 minute in milliseconds
-
+    const unsigned long IDLE_TIMEOUT_1 = 10000 * 1; 
+    
     unsigned long lastActivityTime = time_ms64(); 
 
     //如果有进过料，再进行idle的时候，1分钟后 自动重启
@@ -295,7 +296,7 @@ int main(void)
              //Motion_control_setValue(pwm_ratio);
             
         }
-        if(error==0)
+        if(error!=-1)
         {
             //没有任何操作 1分钟后，自动重启
             if(!onidle)
@@ -304,7 +305,7 @@ int main(void)
             }
                 
         }
-        if(error==0)
+        if(error!=-1)
         {   //启动为白灯
             //已经启动 为绿灯
             //空闲为 蓝灯 （等待重启）
@@ -315,8 +316,14 @@ int main(void)
             if(is_filament_sendout && onidle){
                 SYS_RGB.set_RGB(0x00, 100, 200, 0);
             }
+            if (time_ms64() - lastActivityTime >= IDLE_TIMEOUT_1 && onidle) {
+                SYS_RGB.set_RGB(0x00, 100, 200, 0);
+            }
              // 用当前时间减去最后一次活动时间，判断是否达到了阈值
-            if (time_ms64() - lastActivityTime >= IDLE_TIMEOUT) {
+            if (
+               (is_filament_sendout && time_ms64() - lastActivityTime >= IDLE_TIMEOUT) ||
+                (!is_filament_sendout && time_ms64() - lastActivityTime >= IDLE_TIMEOUT * 2)
+            ) {
                 SYS_RGB.set_RGB(255, 0x00, 255, 0);
                 DEBUG("System has been idle for 1 minute. Rebooting...");
                 
