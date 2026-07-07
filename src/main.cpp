@@ -280,6 +280,10 @@ int main(void)
                 {
                     pwm_ratio[i]=0.5f;
                 }
+                
+                if(MC_PULL_stu[i]!=0){
+                    onidle = false;
+                }
                 */
                 if(a->filament[i].motion != _filament_motion::idle )
                 {

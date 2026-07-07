@@ -281,20 +281,20 @@ static constexpr int MC_PULL_DEADBAND_PCT_HIGH = 70;
 #elif BMCU_P1S  // P1S
     // Stage1
     
-    static constexpr int   MC_LOAD_S1_FAST_PCT       = 85;
+    static constexpr int   MC_LOAD_S1_FAST_PCT       = 88;
     static int   MC_LOAD_S1_HARD_STOP_PCT  = 95;  // bezpiecznik
     static constexpr int   MC_LOAD_S1_HARD_HYS       = 2;   // wróć dopiero < (HARD_STOP - HYS)
     // Stage2 (hold_load)
-    static constexpr float MC_LOAD_S2_HOLD_TARGET_PCT    = 90.0f;
+    static constexpr float MC_LOAD_S2_HOLD_TARGET_PCT    = 95.0f;
     static constexpr float MC_LOAD_S2_HOLD_BAND_LO_DELTA = 1.0f;   // push_hi = hold_target - delta
-    static constexpr float MC_LOAD_S2_PUSH_START_PCT     = 75.0f;  // start push PWM
-    static constexpr float MC_LOAD_S2_PWM_HI             = 480.0f;
+    static constexpr float MC_LOAD_S2_PUSH_START_PCT     = 88.0f;  // start push PWM
+    static constexpr float MC_LOAD_S2_PWM_HI             = 400.0f;
     static constexpr float MC_LOAD_S2_PWM_LO             = 1000.0f;
     
     // ===== ON_USE CONTROL =====
-    static constexpr float MC_ON_USE_TARGET_PCT    = 52.0f;
+    static constexpr float MC_ON_USE_TARGET_PCT    = 54.0f + 5.0f;
     static constexpr float MC_ON_USE_BAND_LO_DELTA = 0.2f;  // band_lo = target - delta
-    static constexpr float MC_ON_USE_BAND_HI_PCT   = 60.0f;
+    static constexpr float MC_ON_USE_BAND_HI_PCT   = 65.0f + 5.0f;
 #else        // A1
     // Stage1
     static constexpr int   MC_LOAD_S1_FAST_PCT       = 85;
@@ -786,6 +786,9 @@ public:
     float    on_use_hi_gate_pct = -1.0f;
     uint64_t on_use_hi_gate_t0_ms = 0ull;
 
+     // 新增：标记需要在5秒等待后强制回抽至45%
+    bool     on_use_force_retract_45 = false; 
+
     uint64_t send_start_ms = 0;
     float    send_start_m  = 0.0f;
     uint8_t  send_len_abort = 0;
@@ -921,11 +924,13 @@ public:
             {
                 on_use_hi_gate_pct   = p;
                 on_use_hi_gate_t0_ms = time_now;
+                on_use_force_retract_45 = true; // <-- 【新增】：设定标志，启用5秒后的回抽动作
             }
             else
             {
                 on_use_hi_gate_pct   = -1.0f;
                 on_use_hi_gate_t0_ms = 0ull;
+                on_use_force_retract_45 = false; // <-- 【新增】
             }
         }
         else if (prev == filament_motion_enum::filament_motion_pressure_ctrl_on_use)
@@ -934,6 +939,7 @@ public:
             retract_hys_active   = 0;
             on_use_hi_gate_pct   = -1.0f;
             on_use_hi_gate_t0_ms = 0ull;
+            on_use_force_retract_45 = false; // <-- 【新增】：退出模式时清除标志
         }
 
         if (_motion == filament_motion_enum::filament_motion_pull)
@@ -1566,64 +1572,97 @@ public:
                     }
                 }
 
-                constexpr float pwm_lo          = 380.0f;
-                constexpr float pct_fast_onuse  = 50.0f;
-                constexpr float pwm_fast_onuse  = 900.0f;
-                constexpr float pwm_cap         = 900.0f;
-
-                constexpr float slope =
-                    (pwm_fast_onuse - pwm_lo) / ((target_pct - MC_ON_USE_BAND_LO_DELTA) - pct_fast_onuse);
-
-                retract_hys_active = 0;
-
-                if (pct >= (target_pct - MC_ON_USE_BAND_LO_DELTA) && pct <= band_hi_eff)
+                // ================== 【新增段落开始】：5秒后强制回抽到 45% ==================
+                if (on_use_hi_gate_pct < 0.0f && on_use_force_retract_45)
                 {
-                    x = 0.0f;
-                    PID_pressure.clear();
-                    on_use_need_move = false;
-                    on_use_abs_err   = 0.0f;
+                    if (pct <= 45.0f)
+                    {
+                        // 已回抽至 45% 及以下，关闭标记
+                        on_use_force_retract_45 = false;
+                        PID_pressure.clear(); // 清除回抽积累的积分值，让衔接更平滑
+                    }
                 }
-                else if (pct < (target_pct - MC_ON_USE_BAND_LO_DELTA))
+
+                if (on_use_hi_gate_pct < 0.0f && on_use_force_retract_45)
                 {
-                    const float err = pct - target_pct;
+                    // 在此覆盖，执行向 45% 回抽动作
+                    const float err = pct - 45.0f;
                     on_use_need_move = true;
-                    on_use_abs_err   = -err;
-
-                    float pwm;
-                    if (pct >= pct_fast_onuse)
-                        pwm = pwm_lo + ((target_pct - MC_ON_USE_BAND_LO_DELTA) - pct) * slope;
-                    else
-                        pwm = pwm_fast_onuse + (pct_fast_onuse - pct) * slope;
-
-                    if (pwm > pwm_cap) pwm = pwm_cap;
-
-                    x = -dir * pwm;
-                    PID_pressure.clear();
-                    on_use_linear = true;
+                    on_use_abs_err = err;
+                    
+                    x = dir * PID_pressure.caculate(err, time_E);
+                    
+                    // 限制最大回抽力量
+                    float lim_f = 500.0f + 80.0f * err;
+                    if (lim_f > 900.0f) lim_f = 900.0f;
+                    
+                    if (x >  lim_f) x =  lim_f;
+                    if (x < -lim_f) x = -lim_f;
+                    if (x * dir < 0.0f) x = 0.0f; // 禁止其反转，只能回抽
+                    
+                    retract_hys_active = 0;
                 }
                 else
                 {
-                    on_use_need_move = true;
+                    constexpr float pwm_lo          = 380.0f;
+                    constexpr float pct_fast_onuse  = 50.0f;
+                    constexpr float pwm_fast_onuse  = 900.0f;
+                    constexpr float pwm_cap         = 900.0f;
 
-                    const float err = pct - target_pct;
-                    on_use_abs_err = (err < 0.0f) ? -err : err;
+                    constexpr float slope =
+                        (pwm_fast_onuse - pwm_lo) / ((target_pct - MC_ON_USE_BAND_LO_DELTA) - pct_fast_onuse);
 
-                    x = dir * PID_pressure.caculate(err, time_E);
+                    retract_hys_active = 0;
 
-                    float lim_f = 500.0f + 80.0f * on_use_abs_err;
-                    if (lim_f > 900.0f) lim_f = 900.0f;
-
-                    if (x >  lim_f) x =  lim_f;
-                    if (x < -lim_f) x = -lim_f;
-
-                    constexpr float retrig = 55.0f;
-                    if (err > 0.0f && pct >= retrig)
+                    if (pct >= (target_pct - MC_ON_USE_BAND_LO_DELTA) && pct <= band_hi_eff)
                     {
-                        float mul = 1.0f + 0.5f * (pct - retrig);
-                        if (mul > 3.0f) mul = 3.0f;
-                        x *= mul;
-                        if (x >  950.0f) x =  950.0f;
-                        if (x < -950.0f) x = -950.0f;
+                        x = 0.0f;
+                        PID_pressure.clear();
+                        on_use_need_move = false;
+                        on_use_abs_err   = 0.0f;
+                    }
+                    else if (pct < (target_pct - MC_ON_USE_BAND_LO_DELTA))
+                    {
+                        const float err = pct - target_pct;
+                        on_use_need_move = true;
+                        on_use_abs_err   = -err;
+
+                        float pwm;
+                        if (pct >= pct_fast_onuse)
+                            pwm = pwm_lo + ((target_pct - MC_ON_USE_BAND_LO_DELTA) - pct) * slope;
+                        else
+                            pwm = pwm_fast_onuse + (pct_fast_onuse - pct) * slope;
+
+                        if (pwm > pwm_cap) pwm = pwm_cap;
+
+                        x = -dir * pwm;
+                        PID_pressure.clear();
+                        on_use_linear = true;
+                    }
+                    else
+                    {
+                        on_use_need_move = true;
+
+                        const float err = pct - target_pct;
+                        on_use_abs_err = (err < 0.0f) ? -err : err;
+
+                        x = dir * PID_pressure.caculate(err, time_E);
+
+                        float lim_f = 500.0f + 80.0f * on_use_abs_err;
+                        if (lim_f > 900.0f) lim_f = 900.0f;
+
+                        if (x >  lim_f) x =  lim_f;
+                        if (x < -lim_f) x = -lim_f;
+
+                        constexpr float retrig = 55.0f;
+                        if (err > 0.0f && pct >= retrig)
+                        {
+                            float mul = 1.0f + 0.5f * (pct - retrig);
+                            if (mul > 3.0f) mul = 3.0f;
+                            x *= mul;
+                            if (x >  950.0f) x =  950.0f;
+                            if (x < -950.0f) x = -950.0f;
+                        }
                     }
                 }
             }
