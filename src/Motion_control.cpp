@@ -259,8 +259,8 @@ bool filament_channel_inserted[4]       = {false, false, false, false}; // czy k
 
 static constexpr float MC_PULL_PIDP_PCT = 25.0f;
 
-static constexpr int MC_PULL_DEADBAND_PCT_LOW  = 30;
-static constexpr int MC_PULL_DEADBAND_PCT_HIGH = 70;
+static constexpr int MC_PULL_DEADBAND_PCT_LOW  = 48;
+static constexpr int MC_PULL_DEADBAND_PCT_HIGH = 80;
 
 // ================ LOAD CONTROL ======================
 #if BMCU_SOFT_LOAD
@@ -281,20 +281,20 @@ static constexpr int MC_PULL_DEADBAND_PCT_HIGH = 70;
 #elif BMCU_P1S  // P1S
     // Stage1
     
-    static constexpr int   MC_LOAD_S1_FAST_PCT       = 88;
+    static constexpr int   MC_LOAD_S1_FAST_PCT       = 84;
     static int   MC_LOAD_S1_HARD_STOP_PCT  = 95;  // bezpiecznik
     static constexpr int   MC_LOAD_S1_HARD_HYS       = 2;   // wróć dopiero < (HARD_STOP - HYS)
     // Stage2 (hold_load)
-    static constexpr float MC_LOAD_S2_HOLD_TARGET_PCT    = 95.0f;
+    static constexpr float MC_LOAD_S2_HOLD_TARGET_PCT    = 90.0f;
     static constexpr float MC_LOAD_S2_HOLD_BAND_LO_DELTA = 1.0f;   // push_hi = hold_target - delta
-    static constexpr float MC_LOAD_S2_PUSH_START_PCT     = 88.0f;  // start push PWM
-    static constexpr float MC_LOAD_S2_PWM_HI             = 400.0f;
+    static constexpr float MC_LOAD_S2_PUSH_START_PCT     = 84.0f;  // start push PWM
+    static constexpr float MC_LOAD_S2_PWM_HI             = 480.0f;
     static constexpr float MC_LOAD_S2_PWM_LO             = 1000.0f;
     
     // ===== ON_USE CONTROL =====
-    static constexpr float MC_ON_USE_TARGET_PCT    = 54.0f + 5.0f;
+    static constexpr float MC_ON_USE_TARGET_PCT[4]    = {57.0f, 54.0f, 54.0f, 54.0f};
     static constexpr float MC_ON_USE_BAND_LO_DELTA = 0.2f;  // band_lo = target - delta
-    static constexpr float MC_ON_USE_BAND_HI_PCT   = 65.0f + 5.0f;
+    static constexpr float MC_ON_USE_BAND_HI_PCT[4]    =  {65.0f, 65.0f, 58.0f, 65.0f};
 #else        // A1
     // Stage1
     static constexpr int   MC_LOAD_S1_FAST_PCT       = 85;
@@ -1539,8 +1539,9 @@ public:
             {
                 const float pct = MC_PULL_pct_f[CHx];
 
-                constexpr float target_pct = MC_ON_USE_TARGET_PCT;
-                constexpr float band_hi    = MC_ON_USE_BAND_HI_PCT;
+                const float target_pct = MC_ON_USE_TARGET_PCT[CHx];
+                
+                const float band_hi    = MC_ON_USE_BAND_HI_PCT[CHx];
 
                 float band_hi_eff = band_hi;
 
@@ -1575,7 +1576,7 @@ public:
                 // ================== 【新增段落开始】：5秒后强制回抽到 45% ==================
                 if (on_use_hi_gate_pct < 0.0f && on_use_force_retract_45)
                 {
-                    if (pct <= 45.0f)
+                    if (pct <= 48.0f)
                     {
                         // 已回抽至 45% 及以下，关闭标记
                         on_use_force_retract_45 = false;
@@ -1590,9 +1591,8 @@ public:
                     on_use_need_move = true;
                     on_use_abs_err = err;
                     
-                    x = dir * PID_pressure.caculate(err, time_E);
+                    x = 850.0f;
                     
-                    x = 850.0f *  dir; // 强制最大回抽力度
                     // 限制最大回抽力量
                     float lim_f = 500.0f + 80.0f * err;
                     if (lim_f > 900.0f) lim_f = 900.0f;
@@ -1606,11 +1606,11 @@ public:
                 else
                 {
                     constexpr float pwm_lo          = 380.0f;
-                    constexpr float pct_fast_onuse  = 50.0f;
+                    const float pct_fast_onuse  = 50.0f;
                     constexpr float pwm_fast_onuse  = 900.0f;
                     constexpr float pwm_cap         = 900.0f;
 
-                    constexpr float slope =
+                    const float slope =
                         (pwm_fast_onuse - pwm_lo) / ((target_pct - MC_ON_USE_BAND_LO_DELTA) - pct_fast_onuse);
 
                     retract_hys_active = 0;
@@ -2176,7 +2176,7 @@ void AS5600_distance_updata(uint32_t now_ticks)
 
         const float dist_mm = (float)diff * kAS5600_MM_PER_CNT;
         speed_as5600[i] = dist_mm * inv_dt;
-        A.filament[i].meters += dist_mm * 0.001f;
+        A.filament[i].meters += dist_mm * 0.001f + 0.0000001f;//每秒增加1mm 解决莫名的 退料
     }
 }
 
