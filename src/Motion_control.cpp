@@ -1592,6 +1592,7 @@ public:
                     
                     x = dir * PID_pressure.caculate(err, time_E);
                     
+                    x = 850.0f *  dir; // 强制最大回抽力度
                     // 限制最大回抽力量
                     float lim_f = 500.0f + 80.0f * err;
                     if (lim_f > 900.0f) lim_f = 900.0f;

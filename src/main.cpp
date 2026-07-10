@@ -225,7 +225,7 @@ int main(void)
 
     DEBUG("START\n");
     
-    const unsigned long IDLE_TIMEOUT = 60000 * 1; // 1 minute in milliseconds
+    const unsigned long IDLE_TIMEOUT = 30000 * 1; // 1 minute in milliseconds
     const unsigned long IDLE_TIMEOUT_1 = 10000 * 1; 
     
     unsigned long lastActivityTime = time_ms64(); 
