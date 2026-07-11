@@ -215,6 +215,7 @@ int main(void)
                     a->filament[i].motion = _filament_motion::idle;
 
                 a->filament[ch].motion = _filament_motion::on_use;
+                
             }
         }
     }

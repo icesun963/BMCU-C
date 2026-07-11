@@ -1215,7 +1215,9 @@ void snoop_other_ams_status(uint8_t *buf, int length)
         }
 
         // 如果目标是别的 AMS，记录其状态
-        if (target_ams_num < 4 && target_ams_num != current_ams_num) {
+        if (target_ams_num < 4 
+            //&& target_ams_num != current_ams_num
+        ) {
             ams_status[target_ams_num].online = true;
             ams_status[target_ams_num].active_channel = channel;
             ams_status[target_ams_num].statu_flag = statu;
@@ -1262,7 +1264,7 @@ void print_other_ams_status(void)
 
         for (int i = 0; i < 4; i++)
         {
-            if (i == current_ams) continue; // 跳过本机不打印（因为本机你另有逻辑）
+            //if (i == current_ams) continue; // 跳过本机不打印（因为本机你另有逻辑）
 
             if (ams_status[i].online)
             {

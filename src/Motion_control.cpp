@@ -292,9 +292,9 @@ static constexpr int MC_PULL_DEADBAND_PCT_HIGH = 70;
     static constexpr float MC_LOAD_S2_PWM_LO             = 1000.0f;
     
     // ===== ON_USE CONTROL =====                       //90A //petg //85a
-    static constexpr float MC_ON_USE_TARGET_PCT[4]    = {54.0f, 54.0f, 54.0f, 54.0f};
+    static constexpr float MC_ON_USE_TARGET_PCT[4]    = {57.0f, 54.0f, 54.0f, 54.0f};
     static constexpr float MC_ON_USE_BAND_LO_DELTA = 0.2f;  // band_lo = target - delta
-    static constexpr float MC_ON_USE_BAND_HI_PCT[4]    =  {60.0f, 65.0f, 58.0f, 65.0f};
+    static constexpr float MC_ON_USE_BAND_HI_PCT[4]    =  {65.0f, 65.0f, 63.0f, 65.0f};
 #else        // A1
     // Stage1
     static constexpr int   MC_LOAD_S1_FAST_PCT       = 85;
@@ -2176,8 +2176,27 @@ void AS5600_distance_updata(uint32_t now_ticks)
 
         const float dist_mm = (float)diff * kAS5600_MM_PER_CNT;
         speed_as5600[i] = dist_mm * inv_dt;
-        A.filament[i].meters += dist_mm * 0.001f + 0.0000001f;//每秒增加1mm 解决莫名的 退料
+        A.filament[i].meters += dist_mm * 0.001f;
+
+
     }
+
+            //0.0000001f;//每秒增加1mm 解决莫名的 退料
+        static uint32_t next_print_deadline = 0;
+        uint32_t current_time = time_ticks32();
+
+        // 如果未初始化，或者当前时间已经超过了下一次打印的 deadline
+        if (next_print_deadline == 0 || time_diff32(current_time, next_print_deadline) > 0)
+        {
+            // 将下一次打印时间设定在 1000 毫秒（1秒）之后
+            next_print_deadline = current_time + ms_to_ticks32(1000u); 
+            for (uint8_t i = 0; i < kChCount; i++)
+            {
+                if(was_ok[i]){
+                    //A.filament[i].meters += 0.0001f;
+                }
+            }
+        }
 }
 
 // ===== stany logiki filamentu =====
@@ -2272,7 +2291,7 @@ static bool motor_motion_filamnet_pull_back_to_online_key(uint64_t time_now)
             {
                 MOTOR_CONTROL[i].set_motion(filament_motion_enum::filament_motion_stop, 100, time_now);
                 filament_now_position[i] = filament_idle;
-
+                DEBUG("**********filament_redetect******");
                 A.filament_use_flag = 0x00;
                 A.filament[i].motion = _filament_motion::idle;
             }
@@ -2366,7 +2385,8 @@ static void motor_motion_switch(uint64_t time_now)
                 float target;
                 if (g_on_use_jam_latch[num])
                 {
-                    target = 0.100f;
+                    //target = 0.100f;
+                    DEBUG("*****g_on_use_jam_latch*****");
                 }
                 else
                 {
