@@ -259,8 +259,8 @@ bool filament_channel_inserted[4]       = {false, false, false, false}; // czy k
 
 static constexpr float MC_PULL_PIDP_PCT = 25.0f;
 
-static constexpr int MC_PULL_DEADBAND_PCT_LOW  = 48;
-static constexpr int MC_PULL_DEADBAND_PCT_HIGH = 80;
+static constexpr int MC_PULL_DEADBAND_PCT_LOW  = 30;
+static constexpr int MC_PULL_DEADBAND_PCT_HIGH = 70;
 
 // ================ LOAD CONTROL ======================
 #if BMCU_SOFT_LOAD
@@ -291,7 +291,7 @@ static constexpr int MC_PULL_DEADBAND_PCT_HIGH = 80;
     static constexpr float MC_LOAD_S2_PWM_HI             = 480.0f;
     static constexpr float MC_LOAD_S2_PWM_LO             = 1000.0f;
     
-    // ===== ON_USE CONTROL =====
+    // ===== ON_USE CONTROL =====                       //90A //petg //85a
     static constexpr float MC_ON_USE_TARGET_PCT[4]    = {57.0f, 54.0f, 54.0f, 54.0f};
     static constexpr float MC_ON_USE_BAND_LO_DELTA = 0.2f;  // band_lo = target - delta
     static constexpr float MC_ON_USE_BAND_HI_PCT[4]    =  {65.0f, 65.0f, 58.0f, 65.0f};

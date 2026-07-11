@@ -297,7 +297,24 @@ int main(void)
 
              }
              
-             //Motion_control_setValue(pwm_ratio);
+                const uint8_t current_ams = (uint8_t)BAMBU_BUS_AMS_NUM;
+                //检测其他ams 状态，以防止混用过程中 被重启
+                for (int i = 0; i < 4; i++)
+                {
+                    if (i == current_ams) continue; 
+
+                    if (ams_status[i].online)
+                    {
+                        if(ams_status[i].motion_flag != 0x00)
+                        {
+                            if(!is_filament_sendout){
+                                DEBUG("****other ams in use****");
+                            }
+                            is_filament_sendout = true;
+                            onidle = false;
+                        }
+                    }
+                }
             
         }
         if(error!=-1)

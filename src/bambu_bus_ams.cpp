@@ -1180,6 +1180,124 @@ void get_package_set_filament_type2(unsigned char *buf, int length)
     bambubus_long_package_get(&data);
 }
 
+
+ams_snoop_status_t ams_status[4] = {};
+
+// ----------------- 新增：总线旁路监听函数 -----------------
+void snoop_other_ams_status(uint8_t *buf, int length)
+{
+    // 基本的数据包合法性检查
+    if (length < 6 || buf[0] != 0x3D) return;
+    if (!package_check_crc16(buf, length)) return; 
+
+    const uint8_t current_ams_num = (uint8_t)BAMBU_BUS_AMS_NUM;
+
+    // 1. 监听 Printer(主机) 发给 AMS 的命令 -> 提取通道和运动状态
+    if (buf[1] == 0xC5) 
+    {
+        uint8_t cmd = buf[4];
+        uint8_t target_ams_num = 0xFF;
+        uint8_t statu = 0, motion = 0, channel = 0xFF;
+
+        if (cmd == 0x03 && length >= (int)sizeof(bambubus_printer_motion_package_struct)) {
+            auto *pkg = (bambubus_printer_motion_package_struct *)buf;
+            target_ams_num = pkg->ams_num;
+            statu = pkg->statu_flag;
+            motion = pkg->motion_flag;
+            channel = pkg->filamnet_channel;
+        } 
+        else if (cmd == 0x04 && length >= (int)sizeof(bambubus_printer_stu_motion_package_struct)) {
+            auto *pkg = (bambubus_printer_stu_motion_package_struct *)buf;
+            target_ams_num = pkg->ams_num;
+            statu = pkg->statu_flag;
+            motion = pkg->motion_flag;
+            channel = pkg->filamnet_channel;
+        }
+
+        // 如果目标是别的 AMS，记录其状态
+        if (target_ams_num < 4 && target_ams_num != current_ams_num) {
+            ams_status[target_ams_num].online = true;
+            ams_status[target_ams_num].active_channel = channel;
+            ams_status[target_ams_num].statu_flag = statu;
+            ams_status[target_ams_num].motion_flag = motion;
+            ams_status[target_ams_num].last_update_ms = time_ticks32();
+        }
+    }
+    // 2. 监听其他 AMS 回复给 Printer 的长数据包 -> 提取温湿度等物理信息
+    // AMS的回应帧其 flag 格式一般为 0xC0 | (package_num << 3)，最高两位是11，所以与0xC0按位与为0xC0
+    else if ((buf[1] & 0xC0) == 0xC0 && buf[1] != 0xC5) 
+    {
+        uint8_t cmd = buf[4];
+        if (cmd == 0x04 && length >= (int)sizeof(bambubus_ams_stu_motion_package_struct)) {
+            auto *pkg = (bambubus_ams_stu_motion_package_struct *)buf;
+            uint8_t source_ams_num = pkg->ams_num;
+            
+            // 如果回复来源于别的 AMS，窃听温湿度
+            if (source_ams_num < 4 && source_ams_num != current_ams_num) {
+                ams_status[source_ams_num].online = true;
+                ams_status[source_ams_num].temperature = pkg->temperature / 10.0f; // 解析出的温度单位是 0.1度
+                ams_status[source_ams_num].humidity = pkg->humidity;               // 解析出的湿度单位是 %
+                ams_status[source_ams_num].last_update_ms = time_ticks32();
+            }
+        }
+    }
+}
+// -------------------------------------------------------------
+
+
+
+// ----------------- 新增：打印其他 AMS 状态函数 -----------------
+void print_other_ams_status(void)
+{
+    static uint32_t next_print_deadline = 0;
+    uint32_t current_time = time_ticks32();
+
+    // 如果未初始化，或者当前时间已经超过了下一次打印的 deadline
+    if (next_print_deadline == 0 || time_diff32(current_time, next_print_deadline) > 0)
+    {
+        // 将下一次打印时间设定在 1000 毫秒（1秒）之后
+        next_print_deadline = current_time + ms_to_ticks32(1000u); 
+
+        const uint8_t current_ams = (uint8_t)BAMBU_BUS_AMS_NUM;
+
+        for (int i = 0; i < 4; i++)
+        {
+            if (i == current_ams) continue; // 跳过本机不打印（因为本机你另有逻辑）
+
+            if (ams_status[i].online)
+            {
+                // 超时掉线检测：如果超过 3000 毫秒没有刷新数据，认为离线
+                uint32_t timeout_deadline = ams_status[i].last_update_ms + ms_to_ticks32(3000u);
+                
+                if (time_diff32(current_time, timeout_deadline) > 0)
+                {
+                    ams_status[i].online = false;
+                    DEBUGF("AMS[%d] Status: Offline (Timeout)\r\n", i);
+                }
+                else
+                {
+                    // 通道若为 0xFF (255)，一般表示闲置或未加载耗材
+                    int ch = ams_status[i].active_channel;
+                    
+                    // 将 float 温度拆分为整数和小数部分，防止单片机不支持 %f 打印
+                    int temp_int = (int)ams_status[i].temperature;
+                    int temp_dec = (int)(ams_status[i].temperature * 10) % 10;
+                    if(temp_dec < 0) temp_dec = -temp_dec;
+
+                    DEBUGF("AMS[%d] Online | CH: %d | Statu: 0x%02X | Motion: 0x%02X | Temp: %d.%dC | Hum: %d%%\r\n",
+                           i, 
+                           ch,
+                           ams_status[i].statu_flag,
+                           ams_status[i].motion_flag,
+                           temp_int, temp_dec,
+                           ams_status[i].humidity);
+                }
+            }
+        }
+    }
+}
+// -------------------------------------------------------------
+
 bambubus_package_type bambubus_run()
 {
     bambubus_package_type stu = bambubus_package_type::none;
@@ -1204,6 +1322,10 @@ bambubus_package_type bambubus_run()
         if (buf != nullptr && rx_len <= 1280 && buf[0] == 0x3D)
         {
             const int len = rx_len;
+
+            // -------- 【在此处插入这行监听代码】 --------
+            snoop_other_ams_status(buf, len);
+            // -----------------------------------------
 
             stu = get_packge_type(buf, len);
            
@@ -1288,6 +1410,8 @@ bambubus_package_type bambubus_run()
 
     if (time_diff32(now, hb_deadline) > 0)
         stu = bambubus_package_type::error;
+
+    print_other_ams_status();
 
     return stu;
 }

@@ -102,3 +102,5 @@ struct _ams
 extern _ams ams[ams_max_number];
 extern void ams_init();
 extern uint8_t bus_now_ams_num;
+
+
