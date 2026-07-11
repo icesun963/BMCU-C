@@ -292,9 +292,9 @@ static constexpr int MC_PULL_DEADBAND_PCT_HIGH = 70;
     static constexpr float MC_LOAD_S2_PWM_LO             = 1000.0f;
     
     // ===== ON_USE CONTROL =====                       //90A //petg //85a
-    static constexpr float MC_ON_USE_TARGET_PCT[4]    = {57.0f, 54.0f, 54.0f, 54.0f};
+    static constexpr float MC_ON_USE_TARGET_PCT[4]    = {54.0f, 54.0f, 54.0f, 54.0f};
     static constexpr float MC_ON_USE_BAND_LO_DELTA = 0.2f;  // band_lo = target - delta
-    static constexpr float MC_ON_USE_BAND_HI_PCT[4]    =  {65.0f, 65.0f, 58.0f, 65.0f};
+    static constexpr float MC_ON_USE_BAND_HI_PCT[4]    =  {60.0f, 65.0f, 58.0f, 65.0f};
 #else        // A1
     // Stage1
     static constexpr int   MC_LOAD_S1_FAST_PCT       = 85;

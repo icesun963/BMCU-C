@@ -335,7 +335,7 @@ int main(void)
                 SYS_RGB.set_RGB(0x00, 200, 0x00, 0);
             }
             if(is_filament_sendout && onidle){
-                SYS_RGB.set_RGB(0x00, 100, 200, 0);
+                SYS_RGB.set_RGB(200, 0, 200, 0);
             }
             if (time_ms64() - lastActivityTime >= IDLE_TIMEOUT_1 && onidle) {
                 SYS_RGB.set_RGB(0x00, 100, 200, 0);
