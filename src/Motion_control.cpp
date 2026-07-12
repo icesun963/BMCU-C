@@ -281,20 +281,20 @@ static constexpr int MC_PULL_DEADBAND_PCT_HIGH = 70;
 #elif BMCU_P1S  // P1S
     // Stage1
     
-    static constexpr int   MC_LOAD_S1_FAST_PCT       = 84;
+    static constexpr int   MC_LOAD_S1_FAST_PCT       = 88;
     static int   MC_LOAD_S1_HARD_STOP_PCT  = 95;  // bezpiecznik
     static constexpr int   MC_LOAD_S1_HARD_HYS       = 2;   // wróć dopiero < (HARD_STOP - HYS)
     // Stage2 (hold_load)
-    static constexpr float MC_LOAD_S2_HOLD_TARGET_PCT    = 90.0f;
+    static constexpr float MC_LOAD_S2_HOLD_TARGET_PCT    = 95.0f;
     static constexpr float MC_LOAD_S2_HOLD_BAND_LO_DELTA = 1.0f;   // push_hi = hold_target - delta
-    static constexpr float MC_LOAD_S2_PUSH_START_PCT     = 84.0f;  // start push PWM
-    static constexpr float MC_LOAD_S2_PWM_HI             = 480.0f;
+    static constexpr float MC_LOAD_S2_PUSH_START_PCT     = 88.0f;  // start push PWM
+    static constexpr float MC_LOAD_S2_PWM_HI             = 550.0f;
     static constexpr float MC_LOAD_S2_PWM_LO             = 1000.0f;
     
     // ===== ON_USE CONTROL =====                       //90A //petg //85a
     static constexpr float MC_ON_USE_TARGET_PCT[4]    = {57.0f, 54.0f, 54.0f, 54.0f};
     static constexpr float MC_ON_USE_BAND_LO_DELTA = 0.2f;  // band_lo = target - delta
-    static constexpr float MC_ON_USE_BAND_HI_PCT[4]    =  {65.0f, 65.0f, 63.0f, 65.0f};
+    static constexpr float MC_ON_USE_BAND_HI_PCT[4]    =  {65.0f, 65.0f, 65.0f, 65.0f};
 #else        // A1
     // Stage1
     static constexpr int   MC_LOAD_S1_FAST_PCT       = 85;
@@ -595,7 +595,7 @@ static inline void MC_PULL_ONLINE_read(uint32_t now_ticks)
     {
         lastlog1 = ms_now; 
        
-        DEBUGF("\n========\n KEY_STU: %u %u %u %u ", MC_ONLINE_key_stu[0], MC_ONLINE_key_stu[1], MC_ONLINE_key_stu[2], MC_ONLINE_key_stu[3]);
+        DEBUGF("\n===== KEY_STU: %u %u %u %u ", MC_ONLINE_key_stu[0], MC_ONLINE_key_stu[1], MC_ONLINE_key_stu[2], MC_ONLINE_key_stu[3]);
       
         DEBUGF("filament_channel_inserted: %d %d %d %d ", filament_channel_inserted[0], filament_channel_inserted[1], filament_channel_inserted[2], filament_channel_inserted[3]);
 
@@ -2193,7 +2193,7 @@ void AS5600_distance_updata(uint32_t now_ticks)
             for (uint8_t i = 0; i < kChCount; i++)
             {
                 if(was_ok[i]){
-                    //A.filament[i].meters += 0.0001f;
+                    A.filament[i].meters += 0.0001f;
                 }
             }
         }
@@ -2388,7 +2388,7 @@ static void motor_motion_switch(uint64_t time_now)
                     //target = 0.100f;
                     DEBUG("*****g_on_use_jam_latch*****");
                 }
-                else
+                //else
                 {
                     const float already = before_pb_retracted_m[num];
                     target = motion_control_pull_back_distance - already;

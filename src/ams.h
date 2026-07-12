@@ -96,6 +96,60 @@ struct _ams
         {
             filament[i].init();
         }
+        {
+            filament[0].name[0]='T';
+            filament[0].name[1]='P';
+            filament[0].name[2]='U';
+            filament[0].name[3]='-';
+            filament[0].name[4]='A';
+            filament[0].name[5]='M';
+            filament[0].name[6]='S';
+            filament[0].name[7]='\0';
+            filament[0].color_R = 0x00;
+            filament[0].color_G = 0xFF;
+            filament[0].color_B = 0x00;
+
+                        // 【关键修改】修改 ID 为 TPU (GFU00)
+            filament[0].bambubus_filament_id[0] = 'G';
+            filament[0].bambubus_filament_id[1] = 'F';
+            filament[0].bambubus_filament_id[2] = 'U';
+            filament[0].bambubus_filament_id[3] = '0';
+            filament[0].bambubus_filament_id[4] = '2';
+
+        }
+        {
+            filament[1].name[0]='P';
+            filament[1].name[1]='L';
+            filament[1].name[2]='A';
+            filament[1].name[3]='\0';
+
+            filament[1].color_R = 0x00;
+            filament[1].color_G = 0x00;
+            filament[1].color_B = 0xFF;
+            filament[1].bambubus_filament_id[0] = 'G';
+            filament[1].bambubus_filament_id[1] = 'F';
+            filament[1].bambubus_filament_id[2] = 'A';
+            filament[1].bambubus_filament_id[3] = '0';
+            filament[1].bambubus_filament_id[4] = '0';
+        }
+        {
+            filament[2].name[0]='T';
+            filament[2].name[1]='P';
+            filament[2].name[2]='U';
+            filament[2].name[3]='-';
+            filament[2].name[4]='A';
+            filament[2].name[5]='M';
+            filament[2].name[6]='S';
+            filament[2].name[7]='\0';
+
+                        // 【关键修改】修改 ID 为 TPU (GFU00)
+            filament[2].bambubus_filament_id[0] = 'G';
+            filament[2].bambubus_filament_id[1] = 'F';
+            filament[2].bambubus_filament_id[2] = 'U';
+            filament[2].bambubus_filament_id[3] = '0';
+            filament[2].bambubus_filament_id[4] = '2';
+
+        }
     }
 } __attribute__((aligned(4)));
 
