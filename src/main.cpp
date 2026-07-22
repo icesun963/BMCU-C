@@ -347,13 +347,18 @@ int main(void)
                 (!is_filament_sendout && time_ms64() - lastActivityTime >= IDLE_TIMEOUT * 2)
             ) {
                 SYS_RGB.set_RGB(255, 0x00, 255, 0);
+                SYS_RGB.updata();
                 DEBUG("System has been idle for 1 minute. Rebooting...");
                 
                 // 延时一下以确保上面的 Serial.println 能够完整发送到电脑
                 delay(1000 * 15); 
                 
                 // 3. 触发核心软件复位 (CH32V / RISC-V 均适用)
-                NVIC_SystemReset(); 
+                //NVIC_SystemReset(); 
+                //会引发2号通道的异常，无视
+                lastActivityTime = time_ms64();
+                is_filament_sendout = false; // 重置标志位
+                error = 0;
             }
         }
     }
